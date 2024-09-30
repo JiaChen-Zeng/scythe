@@ -4,7 +4,7 @@ This fork aims to add utf-8 support for text input. Currently typing is fine for
 
 此 Fork 版本旨在为文本输入添加 utf-8 （中文等）支持。目前，Textbox 的键入功能还算能用不过有限，完美实现需要重写大部分代码。
 
-![demo](docs/demo.mp4)
+<div><video controls src="https://github.com/user-attachments/assets/c44e187e-222e-4046-a5ff-80385214144f" muted="false"></video></div>
 
 # Scythe
 
