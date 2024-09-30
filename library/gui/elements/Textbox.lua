@@ -16,6 +16,28 @@
 -- @option validateOnType boolean Calls the validator repeatedly as the user
 -- types; use this for restricting the range of characters that can be entered.
 -- Defaults to `false`.
+
+local utf8 = require("utf8")
+local function utf8sub(s, i, j)
+  if j == nil then j = utf8.len(s) end
+
+  -- Handle negative indices
+  if i < 0 then
+      i = utf8.len(s) + i + 1
+  end
+  if j < 0 then
+      j = utf8.len(s) + j + 1
+  end
+
+  i = utf8.offset(s, i)
+  j = utf8.offset(s, j + 1) - 1
+  return string.sub(s, i, j)
+end
+
+local function charcode2utf8(char)
+  return utf8.char(("0x%08x"):format(char & 0x0000FFFF))
+end
+
 local Buffer = require("public.buffer")
 
 local Font = require("public.font")
@@ -150,7 +172,7 @@ end
 function Textbox:val(newval)
 
   if newval then
-    self:setEditorState(tostring(newval), nil, string.len(newval) + 2 - self.windowW)
+    self:setEditorState(tostring(newval), nil, utf8.len(newval) + 2 - self.windowW)
     self:redraw()
   else
     return self.retval
@@ -259,7 +281,7 @@ function Textbox:onType(state)
     end
 
   -- Typeable chars
-  elseif Math.clamp(32, char, 254) == char then
+  else
     if self.selectionStart then self:deleteSelection() end
 
     self:insertChar(char)
@@ -277,7 +299,7 @@ end
 function Textbox:onWheel(state)
   if state.preventDefault then return end
 
-  local len = string.len(self.retval)
+  local len = utf8.len(self.retval)
 
   if len <= self.windowW then return end
 
@@ -345,7 +367,7 @@ function Textbox:drawText()
   Color.set(self.color)
   Font.set(self.textFont)
 
-  local str = string.sub(self.retval, self.windowPosition + 1)
+  local str = utf8sub(self.retval, self.windowPosition + 1)
 
   gfx.x = self.x + 4
   gfx.y = self.y + (self.h - gfx.texth) / 2
@@ -418,7 +440,7 @@ end
 function Textbox:drawGradient()
 
   local left = self.windowPosition > 0
-  local right = self.windowPosition < (string.len(self.retval) - self.windowW + 2)
+  local right = self.windowPosition < (utf8.len(self.retval) - self.windowW + 2)
   if not (left or right) then return end
 
   local fadeW = 8
@@ -466,7 +488,7 @@ function Textbox:selectAll()
 
   self.selectionStart = 0
   self.caret = 0
-  self.selectionEnd = string.len(self.retval)
+  self.selectionEnd = utf8.len(self.retval)
 
 end
 
@@ -477,9 +499,9 @@ function Textbox:selectWord()
 
   if not str or str == "" then return 0 end
 
-  self.selectionStart = string.find( str:sub(1, self.caret), "%s[%S]+$") or 0
+  self.selectionStart = string.find( utf8sub(str, 1, self.caret), "%s[%S]+$") or 0
   self.selectionEnd = (
-    string.find( str, "%s", self.selectionStart + 1) or string.len(str) + 1
+    string.find( str, "%s", self.selectionStart + 1) or utf8.len(str) + 1
   ) - (self.windowPosition > 0 and 2 or 1) -- Kludge, fixes length issues
 
 end
@@ -495,8 +517,8 @@ function Textbox:deleteSelection()
 
   if s > e then s, e = e, s end
 
-  self.retval =   string.sub(self.retval or "", 1, s)..
-                  string.sub(self.retval or "", e + 1)
+  self.retval =   utf8sub(self.retval or "", 1, s)..
+                  utf8sub(self.retval or "", e + 1)
 
   self.caret = s
 
@@ -512,7 +534,7 @@ function Textbox:getSelectedText()
 
   if s > e then s, e = e, s end
 
-  return self.retval:sub(s + 1, e)
+  return utf8sub(self.retval, s + 1, e)
 
 end
 
@@ -572,7 +594,7 @@ end
 function Textbox:calcCaretPosition(x)
 
   local caretX = math.floor(  ((x - self.x) / self.w) * self.windowW) + self.windowPosition
-  return Math.clamp(0, caretX, string.len(self.retval or ""))
+  return Math.clamp(0, caretX, utf8.len(self.retval or ""))
 
 end
 
@@ -585,34 +607,33 @@ end
 
 
 function Textbox:insertString(str, moveCaret)
-
   self:storeUndoState()
 
   local sanitized = self:sanitizeText(str)
 
   if self.selectionStart then self:deleteSelection() end
 
-  local pre, post =   string.sub(self.retval or "", 1, self.caret),
-                      string.sub(self.retval or "", self.caret + 1)
+  local pre, post =   utf8sub(self.retval or "", 1, self.caret),
+                      utf8sub(self.retval or "", self.caret + 1)
 
   self.retval = pre .. tostring(sanitized) .. post
 
-  if moveCaret then self.caret = self.caret + string.len(sanitized) end
+  if moveCaret then self.caret = self.caret + utf8.len(sanitized) end
 
   if self.validateOnType and not self:validate() then self:undo() end
 
 end
 
-
 function Textbox:insertChar(char)
 
   self:storeUndoState()
 
-  local a, b = string.sub(self.retval, 1, self.caret),
-               string.sub(self.retval, self.caret + (self.insertCaret and 2 or 1))
+  local a, b = utf8sub(self.retval, 1, self.caret),
+               utf8sub(self.retval, self.caret + (self.insertCaret and 2 or 1))
 
-  self.retval = a..string.char(char)..b
-  self.caret = self.caret + 1
+  local utf8char = charcode2utf8(char)
+  self.retval = a..utf8char..b
+  self.caret = self.caret + utf8.len(utf8char)
 
   if self.validateOnType and not self:validate() then self:undo() end
 
@@ -621,7 +642,7 @@ end
 
 function Textbox:carettoend()
 
-  return string.len(self.retval or "")
+  return utf8.len(self.retval or "")
 
 end
 
@@ -646,7 +667,7 @@ Textbox.processKey = {
   end,
 
   [Const.chars.RIGHT] = function(self)
-    self.caret = math.min( string.len(self.retval), self.caret + 1 )
+    self.caret = math.min( utf8.len(self.retval), self.caret + 1 )
   end,
 
   [Const.chars.UP] = function(self)
@@ -654,7 +675,7 @@ Textbox.processKey = {
   end,
 
   [Const.chars.DOWN] = function(self)
-    self.caret = string.len(self.retval)
+    self.caret = utf8.len(self.retval)
   end,
 
   [Const.chars.BACKSPACE] = function(self)
@@ -670,8 +691,8 @@ Textbox.processKey = {
     if self.caret <= 0 then return end
 
       local str = self.retval
-      self.retval =   string.sub(str, 1, self.caret - 1)..
-                      string.sub(str, self.caret + 1, -1)
+      self.retval =   utf8sub(str, 1, self.caret - 1)..
+                      utf8sub(str, self.caret + 1, -1)
       self.caret = math.max(0, self.caret - 1)
 
     end
@@ -693,8 +714,8 @@ Textbox.processKey = {
     else
 
       local str = self.retval
-      self.retval =   string.sub(str, 1, self.caret) ..
-                      string.sub(str, self.caret + 2)
+      self.retval =   utf8sub(str, 1, self.caret) ..
+                      utf8sub(str, self.caret + 2)
 
     end
 
@@ -710,7 +731,7 @@ Textbox.processKey = {
   end,
 
   [Const.chars.END] = function(self)
-    self.caret = string.len(self.retval)
+    self.caret = utf8.len(self.retval)
   end,
 
   [Const.chars.TAB] = function(self)
@@ -777,7 +798,7 @@ end
 function Textbox:setEditorState(retval, caret, windowPosition, selectionStart, selectionEnd)
 
   self.retval = retval or ""
-  self.caret = math.min(caret and caret or self.caret, string.len(self.retval))
+  self.caret = math.min(caret and caret or self.caret, utf8.len(self.retval))
   self.windowPosition = windowPosition or 0
   self.selectionStart, self.selectionEnd = selectionStart or nil, selectionEnd or nil
 
