@@ -364,6 +364,15 @@ function Textbox:drawText()
 
 end
 
+function Textbox:getCharWAt(i, j)
+  if j == nil then j = i end
+
+  local len = utf8.len(self.retval)
+  if i == len + 1 and j == len + 1 then return gfx.measurestr(" ") end
+
+  local w = gfx.measurestr(utf8_simple.sub(self.retval, i, j))
+  return w
+end
 
 function Textbox:drawCaret()
 
@@ -375,9 +384,9 @@ function Textbox:drawCaret()
 
       local caretH = self.charH - 2
 
-      gfx.rect(   self.x + (caretRelative * self.charW) + 4,
+      gfx.rect(   self.x + self:getCharWAt(self.caret - caretRelative + 1, self.caret) + 4,
                   self.y + (self.h - caretH) / 2,
-                  self.insertCaret and self.charW or 2,
+                  self.insertCaret and self:getCharWAt(self.caret + 1) or 2,
                   caretH)
 
   end
