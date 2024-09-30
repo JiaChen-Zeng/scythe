@@ -1,3 +1,11 @@
+# Fork
+
+This fork aims to add utf-8 support for text input. Currently typing is fine for Textbox but limited. Perfect implementation would require to rewrite a large portion of code.
+
+此 Fork 版本旨在为文本输入添加 utf-8 （中文等）支持。目前，Textbox 的键入功能还算能用不过有限，完美实现需要重写大部分代码。
+
+![demo](docs/demo.mp4)
+
 # Scythe
 
 _This project is on an indefinite hiatus. The [Ultraschall team](https://github.com/Ultraschall) have adopted [v2](https://github.com/Lokasenna_GUI) and are continuing development in their codebase._
