@@ -18,21 +18,7 @@
 -- Defaults to `false`.
 
 local utf8 = require("utf8")
-local function utf8sub(s, i, j)
-  if j == nil then j = utf8.len(s) end
-
-  -- Handle negative indices
-  if i < 0 then
-      i = utf8.len(s) + i + 1
-  end
-  if j < 0 then
-      j = utf8.len(s) + j + 1
-  end
-
-  i = utf8.offset(s, i)
-  j = utf8.offset(s, j + 1) - 1
-  return string.sub(s, i, j)
-end
+local utf8_simple = require("public.utf8_simple")
 
 local function charcode2utf8(char)
   return utf8.char(("0x%08x"):format(char & 0x0000FFFF))
@@ -367,7 +353,7 @@ function Textbox:drawText()
   Color.set(self.color)
   Font.set(self.textFont)
 
-  local str = utf8sub(self.retval, self.windowPosition + 1)
+  local str = utf8_simple.sub(self.retval, self.windowPosition + 1)
 
   gfx.x = self.x + 4
   gfx.y = self.y + (self.h - gfx.texth) / 2
@@ -499,7 +485,7 @@ function Textbox:selectWord()
 
   if not str or str == "" then return 0 end
 
-  self.selectionStart = string.find( utf8sub(str, 1, self.caret), "%s[%S]+$") or 0
+  self.selectionStart = string.find( utf8_simple.sub(str, 1, self.caret), "%s[%S]+$") or 0
   self.selectionEnd = (
     string.find( str, "%s", self.selectionStart + 1) or utf8.len(str) + 1
   ) - (self.windowPosition > 0 and 2 or 1) -- Kludge, fixes length issues
@@ -517,8 +503,8 @@ function Textbox:deleteSelection()
 
   if s > e then s, e = e, s end
 
-  self.retval =   utf8sub(self.retval or "", 1, s)..
-                  utf8sub(self.retval or "", e + 1)
+  self.retval =   utf8_simple.sub(self.retval or "", 1, s)..
+                  utf8_simple.sub(self.retval or "", e + 1)
 
   self.caret = s
 
@@ -534,7 +520,7 @@ function Textbox:getSelectedText()
 
   if s > e then s, e = e, s end
 
-  return utf8sub(self.retval, s + 1, e)
+  return utf8_simple.sub(self.retval, s + 1, e)
 
 end
 
@@ -613,8 +599,8 @@ function Textbox:insertString(str, moveCaret)
 
   if self.selectionStart then self:deleteSelection() end
 
-  local pre, post =   utf8sub(self.retval or "", 1, self.caret),
-                      utf8sub(self.retval or "", self.caret + 1)
+  local pre, post =   utf8_simple.sub(self.retval or "", 1, self.caret),
+                      utf8_simple.sub(self.retval or "", self.caret + 1)
 
   self.retval = pre .. tostring(sanitized) .. post
 
@@ -628,8 +614,8 @@ function Textbox:insertChar(char)
 
   self:storeUndoState()
 
-  local a, b = utf8sub(self.retval, 1, self.caret),
-               utf8sub(self.retval, self.caret + (self.insertCaret and 2 or 1))
+  local a, b = utf8_simple.sub(self.retval, 1, self.caret),
+               utf8_simple.sub(self.retval, self.caret + (self.insertCaret and 2 or 1))
 
   local utf8char = charcode2utf8(char)
   self.retval = a..utf8char..b
@@ -691,8 +677,8 @@ Textbox.processKey = {
     if self.caret <= 0 then return end
 
       local str = self.retval
-      self.retval =   utf8sub(str, 1, self.caret - 1)..
-                      utf8sub(str, self.caret + 1, -1)
+      self.retval =   utf8_simple.sub(str, 1, self.caret - 1)..
+                      utf8_simple.sub(str, self.caret + 1, -1)
       self.caret = math.max(0, self.caret - 1)
 
     end
@@ -714,8 +700,8 @@ Textbox.processKey = {
     else
 
       local str = self.retval
-      self.retval =   utf8sub(str, 1, self.caret) ..
-                      utf8sub(str, self.caret + 2)
+      self.retval =   utf8_simple.sub(str, 1, self.caret) ..
+                      utf8_simple.sub(str, self.caret + 2)
 
     end
 
